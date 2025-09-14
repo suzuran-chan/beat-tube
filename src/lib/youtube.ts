@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod"; // Zodをインポート
 import { YouTubeSearchResponseSchema, YouTubeVideo, YouTubeVideoListResponseSchema } from "./youtube-types";
 
 interface SearchResult {
