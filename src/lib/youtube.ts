@@ -54,7 +54,7 @@ export async function searchVideos(
     }
 
     // 検索結果から動画以外のもの（チャンネルなど）を除外する
-    const videoItems = parsedSearch.data.items.filter((item: any) => item.id && item.id.kind === 'youtube#video' && item.id.videoId);
+    const videoItems = parsedSearch.data.items.filter((item: z.infer<typeof YouTubeSearchResponseSchema>['items'][number]) => item.id && item.id.kind === 'youtube#video' && item.id.videoId);
 
     if (videoItems.length === 0) {
       return { videos: [], nextPageToken: null, error: null };
