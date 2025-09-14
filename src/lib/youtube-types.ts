@@ -4,7 +4,9 @@ import { z } from "zod";
 export const YouTubeSearchItemSchema = z.object({
   id: z.object({
     kind: z.string(),
-    videoId: z.string(),
+    videoId: z.string().optional(), // videoIdをoptionalにする
+    channelId: z.string().optional(), // channelIdを追加
+    playlistId: z.string().optional(), // playlistIdを追加
   }),
   snippet: z.object({
     publishedAt: z.string(),
