@@ -1,103 +1,98 @@
-import Image from "next/image";
+'use client';
+
+import { useEffect, useState, useCallback } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { searchVideos } from "@/lib/youtube";
+import { YouTubeVideo } from "@/lib/youtube-types";
+import { VideoGrid } from "@/components/VideoGrid";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [videoType, setVideoType] = useState<"normal" | "shorts">("normal");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  const fetchVideos = useCallback(async (type: "normal" | "shorts", pageToken?: string) => {
+    // 新規読み込みか、追加読み込みかでローディング状態を分ける
+    if (pageToken) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+      setVideos([]); // 新規読み込み時は動画リストをリセット
+    }
+    setError(null);
+    
+    const result = await searchVideos(type, pageToken);
+
+    if (result.error) {
+      setError(result.error);
+      setVideos([]);
+    } else {
+      // 既存のリストに新しい動画を追加する
+      setVideos(prevVideos => [...prevVideos, ...(result.videos || [])]);
+      setNextPageToken(result.nextPageToken || null);
+    }
+
+    setIsLoading(false);
+    setIsLoadingMore(false);
+  }, []);
+
+  // 初回読み込みとタブ切り替え時のデータ取得
+  useEffect(() => {
+    fetchVideos(videoType);
+  }, [videoType, fetchVideos]);
+
+  const handleTabChange = (value: string) => {
+    setVideoType(value as "normal" | "shorts");
+  };
+
+  const handleLoadMore = () => {
+    if (nextPageToken) {
+      fetchVideos(videoType, nextPageToken);
+    }
+  };
+
+  const renderContent = () => {
+    if (isLoading) {
+      return <p className="text-center">読み込み中...</p>;
+    }
+    if (error) {
+      return <p className="text-center text-red-500">エラー: {error}</p>;
+    }
+    return (
+      <>
+        <VideoGrid videos={videos} />
+        {nextPageToken && (
+          <div className="flex justify-center mt-8">
+            <Button onClick={handleLoadMore} disabled={isLoadingMore}>
+              {isLoadingMore ? "読み込み中..." : "さらに読み込む"}
+            </Button>
+          </div>
+        )}
+      </>
+    );
+  };
+
+  return (
+    <main className="container mx-auto p-4">
+      <header className="mb-8">
+        <h1 className="text-4xl font-bold text-center">Beat Tube</h1>
+        <p className="text-muted-foreground text-center mt-2">
+          A Beat Saber video explorer.
+        </p>
+      </header>
+
+      <Tabs defaultValue="normal" className="w-full" onValueChange={handleTabChange}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="normal">通常動画</TabsTrigger>
+          <TabsTrigger value="shorts">ショート動画</TabsTrigger>
+        </TabsList>
+        <TabsContent value="normal" className="mt-4">{renderContent()}</TabsContent>
+        <TabsContent value="shorts" className="mt-4">{renderContent()}</TabsContent>
+      </Tabs>
+    </main>
   );
 }
